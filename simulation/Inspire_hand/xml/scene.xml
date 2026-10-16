@@ -1,12 +1,10 @@
-<mujoco model="ur5e scene">
+<mujoco model="inspire_hand_scene">
 
   <compiler angle="radian" meshdir="." autolimits="true"/>
 
-<option timestep="0.002" gravity="0 0 -9.81">
+  <option timestep="0.002" gravity="0 0 -9.81">
     <flag sensor="disable"/>
   </option>
-
-  <include file="inspire_hand_left.xml"/>
 
   <include file="inspire_hand_right.xml"/>
 
@@ -28,7 +26,6 @@
   <worldbody>
     <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
-
   </worldbody>
 
 </mujoco>

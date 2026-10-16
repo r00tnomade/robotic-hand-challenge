@@ -18,12 +18,25 @@ This project provides a MuJoCo simulation for the `Inspire hand RH56DFTP-2L` mod
   - `xml/`: MuJoCo XML files
     - `scene.xml`: Main simulation scene
     - `inspire_hand_right.xml`: Right-hand model definition
-    - `inspire_hand_left.xml`: Left-hand model definition
   - `collision/`: Collision mesh OBJ files
   - `visual/`: Visual mesh OBJ files
   - `xml/material.mtl`: Material information
 - `example/`
   - `control_inspire_hand.py`: MuJoCo viewer-based control example
+
+## Grasp simulation (`hand_sim/`)
+Emulates the real hand's register interface (ANGLE_SET / FORCE_SET / SPEED_SET in,
+ANGLE_ACT / FORCE_ACT / CURRENT / STATUS out) and lets the hand grasp the VEGABAR sensors.
+Run all commands from this `simulation/` folder:
+
+```bash
+../venv/bin/pip install -r requirements.txt
+../venv/bin/python -m hand_sim.assets      # once: CAD STL -> objects/<id>/ (metres, convex parts)
+../venv/bin/mjpython -m hand_sim.run       # viewer; type `help` in the terminal for commands
+```
+
+On macOS the viewer must be started with `mjpython`. Typical session: `obj vegabar_38`, `close`,
+`release`, `status`, `open`, `attach`.
 
 ## URDF Source
 - URDF origin/reference: https://github.com/dexsuite/dex-urdf/tree/main?tab=readme-ov-file
