@@ -17,6 +17,8 @@ import mujoco.viewer
 import numpy as np
 
 from . import config as C
+from .episode import HandoverEpisode
+from .policy import ScriptedGraspPolicy
 from .world import World
 
 HELP = f"""commands:
@@ -86,21 +88,12 @@ def _handle(cmd: str, world: World) -> bool:
     return True
 
 
-def _demo_script():
-    """Endless (sim time in s, command) sequence: grasp, release, hold, open, next object."""
-    t = 0.0
-    while True:
-        for obj_id in C.OBJECTS:
-            for dt, cmd in ((0.5, f"obj {obj_id}"), (1.0, "close"), (1.5, "release"), (3.0, "open"), (1.5, "preshape")):
-                t += dt
-                yield t, cmd
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--object", default=next(iter(C.OBJECTS)), choices=list(C.OBJECTS))
     ap.add_argument("--seed", type=int, default=None)
-    ap.add_argument("--demo", action="store_true", help="loop grasp/release/open on all objects automatically")
+    ap.add_argument("--demo", action="store_true",
+                    help="loop random handover episodes (scripted policy) on random objects")
     args = ap.parse_args()
 
     world = World(seed=args.seed)
@@ -117,9 +110,11 @@ def main():
             paused[0] = not paused[0]
             print("[paused]" if paused[0] else "[running]")
 
-    demo = _demo_script() if args.demo else None
-    next_demo = next(demo) if demo else None
-    demo_t0 = world.d.time
+    demo_rng = np.random.default_rng(args.seed)
+    demo_policy = ScriptedGraspPolicy()
+    episode = None
+    n_episodes = n_success = 0
+    pace = {"steps": 0}
 
     print(HELP)
     with mujoco.viewer.launch_passive(world.m, world.d, key_callback=key_callback) as viewer:
@@ -129,20 +124,42 @@ def main():
         viewer.cam.lookat[:] = [0.03, 0.1, 0.12]
 
         steps_per_frame = max(1, round((1 / 60) / world.m.opt.timestep))
+
+        def paced_step(n):
+            """Episode stepper: step under the viewer lock, sync and sleep about once per rendered frame."""
+            with viewer.lock():
+                world.step(n)
+            pace["steps"] += n
+            if pace["steps"] >= steps_per_frame:
+                pace["steps"] = 0
+                viewer.sync()
+                time.sleep(steps_per_frame * world.m.opt.timestep)
+
         while viewer.is_running():
             frame_start = time.perf_counter()
-            while next_demo and world.d.time - demo_t0 >= next_demo[0]:
-                print(f"[demo] {next_demo[1]}")
-                with viewer.lock():
-                    _handle(next_demo[1], world)
-                if next_demo[1] == "release":
-                    with viewer.lock():
-                        _print_status(world)
-                next_demo = next(demo)
             while not commands.empty():
                 with viewer.lock():
                     if not _handle(commands.get(), world):
                         return
+            if args.demo:
+                if paused[0]:
+                    viewer.sync()
+                    time.sleep(0.02)
+                    continue
+                if episode is None:
+                    with viewer.lock():
+                        episode = HandoverEpisode(world, demo_policy, demo_rng, step_fn=paced_step)
+                    print(f"[demo] episode {n_episodes + 1}: {episode.obj_id}, roll {np.degrees(episode.info['roll_rad']):.0f} deg")
+                if not episode.tick():
+                    res = episode.result
+                    n_episodes += 1
+                    n_success += res["success"]
+                    print(f"[demo]   {'OK' if res['success'] else 'FAILED (' + res['failure'] + ')'}: shift {res['shift_mm']} mm, "
+                          f"rot {res['rot_deg']} deg  | {n_success}/{n_episodes} successful")
+                    viewer.sync()
+                    time.sleep(1.0)
+                    episode = None
+                continue
             if not paused[0]:
                 with viewer.lock():
                     world.step(steps_per_frame)

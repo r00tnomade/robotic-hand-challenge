@@ -58,7 +58,6 @@ class ScriptedGraspPolicy(Policy):
         self._last_angles = None
         self._still_since = None
         self._closing_sent = False
-        self._retightened = False
 
     def act(self, obs):
         if obs.phase == PHASE_APPROACH:
@@ -75,10 +74,6 @@ class ScriptedGraspPolicy(Policy):
             self._last_angles = angles
             settled = self._still_since is not None and obs.t - self._still_since >= self.SETTLE_S
             return Action(release=settled)
-        if obs.phase == PHASE_HOLD and not self._retightened and obs.phase_t >= C.RELEASE_RAMP_S:
-            # Re-writing ANGLE_SET clears the force stop, so the fingers squeeze again under full load.
-            self._retightened = True
-            return Action(angle_set=self.CLOSE_ANGLES)
         return Action()
 
 

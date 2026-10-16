@@ -50,8 +50,10 @@ def _smoothstep(x):
 
 
 class HandoverEpisode:
-    def __init__(self, world: World, policy: Policy, rng: np.random.Generator, obj_id: str | None = None, on_frame=None):
+    def __init__(self, world: World, policy: Policy, rng: np.random.Generator, obj_id: str | None = None,
+                 on_frame=None, step_fn=None):
         self.world, self.policy, self.rng = world, policy, rng
+        self.step_fn = step_fn or (lambda n: world.step(n))  # the viewer substitutes a locking/pacing stepper
         self.obj_id = obj_id or str(rng.choice(list(C.OBJECTS)))
         self.on_frame = on_frame  # callable(episode, Observation) once per control tick (recorder hook)
         self.substeps = round(1.0 / (C.CONTROL_HZ * world.m.opt.timestep))
@@ -161,7 +163,7 @@ class HandoverEpisode:
                 w.move_carrier(self.obj_id, self.start_pos + (self.target_pos - self.start_pos) * s)
             elif self.phase == PHASE_HOLD:
                 w.set_support(1.0 - _smoothstep((w.d.time - self.phase_t0) / C.RELEASE_RAMP_S))
-            w.step()
+            self.step_fn(1)
 
         phase_t = w.d.time - self.phase_t0
         if self.phase == PHASE_APPROACH and phase_t >= C.APPROACH_TIME_S:
