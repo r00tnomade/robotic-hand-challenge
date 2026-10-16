@@ -8,18 +8,12 @@ import time
 #                    thumb_yaw  thumb_pitch  index  middle  ring  pinky
 KP_SINGLE_HAND = [0.1, 0.1, 0.5, 0.5, 0.5, 0.5]
 KD_SINGLE_HAND = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
-# Both hands
-KP = np.array(KP_SINGLE_HAND + KP_SINGLE_HAND)
-KD = np.array(KD_SINGLE_HAND + KD_SINGLE_HAND)
+# Right hand only (scene.xml no longer includes the left hand)
+KP = np.array(KP_SINGLE_HAND)
+KD = np.array(KD_SINGLE_HAND)
 
-# Actuated joint names (6 DOF per hand)
+# Actuated joint names (6 DOF)
 ACTUATED_JOINTS = [
-    "left_thumb_proximal_yaw_joint",
-    "left_thumb_proximal_pitch_joint",
-    "left_index_proximal_joint",
-    "left_middle_proximal_joint",
-    "left_ring_proximal_joint",
-    "left_pinky_proximal_joint",
     "right_thumb_proximal_yaw_joint",
     "right_thumb_proximal_pitch_joint",
     "right_index_proximal_joint",
