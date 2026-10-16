@@ -4,11 +4,10 @@ import numpy as np
 import os
 import time
 
-
 # PD gains per joint (6 per hand: thumb_yaw, thumb_pitch, index, middle, ring, pinky)
 #                    thumb_yaw  thumb_pitch  index  middle  ring  pinky
-KP_SINGLE_HAND = [    0.1,       0.1,        0.5,   0.5,   0.5,  0.5]
-KD_SINGLE_HAND = [    0.01,      0.01,       0.01,  0.01,  0.01, 0.01]
+KP_SINGLE_HAND = [0.1, 0.1, 0.5, 0.5, 0.5, 0.5]
+KD_SINGLE_HAND = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
 # Both hands
 KP = np.array(KP_SINGLE_HAND + KP_SINGLE_HAND)
 KD = np.array(KD_SINGLE_HAND + KD_SINGLE_HAND)
@@ -42,12 +41,17 @@ def generate_target_trajectory(joint_ranges, loop_steps: int):
     inds[inds == 0] = 1
     alphas = (bins[inds] - times) / (bins[inds] - bins[inds - 1])
 
-    trajectory = alphas * trajectory_via_points[:, inds - 1] + (1.0 - alphas) * trajectory_via_points[:, inds]
+    trajectory = (
+        alphas * trajectory_via_points[:, inds - 1]
+        + (1.0 - alphas) * trajectory_via_points[:, inds]
+    )
     return trajectory.T
 
 
 def main():
-    scene_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Inspire_hand", "xml", "scene.xml")
+    scene_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "Inspire_hand", "xml", "scene.xml"
+    )
     model = mujoco.MjModel.from_xml_path(os.path.abspath(scene_path))
     data = mujoco.MjData(model)
 
@@ -79,8 +83,10 @@ def main():
     # Debug: print trajectory range for each actuator
     print(f"\nTrajectory ranges:")
     for i in range(len(act_joint_ids)):
-        print(f"  [{i}] {ACTUATED_JOINTS[i]}: target {trajectory[:, i].min():.4f} ~ {trajectory[:, i].max():.4f}, "
-              f"kp={KP[i]}, kd={KD[i]}")
+        print(
+            f"  [{i}] {ACTUATED_JOINTS[i]}: target {trajectory[:, i].min():.4f} ~ {trajectory[:, i].max():.4f}, "
+            f"kp={KP[i]}, kd={KD[i]}"
+        )
 
     print(f"\nActuators: {model.nu}, Joints: {model.njnt}")
 
@@ -114,12 +120,14 @@ def main():
                 qvel_adr = model.jnt_dofadr[jid]
                 pos_error = q_target[i] - data.qpos[qpos_adr]
                 vel = data.qvel[qvel_adr]
-                torque = KP[i] * pos_error -  KD[i] * vel
+                torque = KP[i] * pos_error - KD[i] * vel
                 # torque = 0.1 * pos_error - 0.01 * vel
                 data.ctrl[i] = np.clip(torque, -1, 1)
 
             # Camera orbit
-            viewer.cam.azimuth = cam_base_azimuth + cam_amplitude * np.sin(2 * np.pi * cam_step / cam_loop_steps)
+            viewer.cam.azimuth = cam_base_azimuth + cam_amplitude * np.sin(
+                2 * np.pi * cam_step / cam_loop_steps
+            )
             cam_step = (cam_step + 1) % cam_loop_steps
 
             mujoco.mj_step(model, data)
