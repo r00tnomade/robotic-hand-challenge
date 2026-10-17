@@ -31,8 +31,10 @@ HELP = f"""commands:
   speed  a b c d e f  raw SPEED_SET (0-1000)
   release             let go of the object (gravity takes over)
   attach              put the object back at its grasp pose
-  status              print the register readout
-  help | quit"""
+  status               print the register readout
+  tactile              print tactile group sums/contacts above the contact threshold
+  help | quit
+(run with --demo for an automatic loop of random handover episodes instead)"""
 
 
 def _stdin_reader(q: queue.Queue):
@@ -81,6 +83,11 @@ def _handle(cmd: str, world: World) -> bool:
             world.place(world.active, cfg["grasp_pos"], cfg["grasp_quat"])
         elif op == "status":
             _print_status(world)
+        elif op == "tactile":
+            raw = world.tactile.step(world.d)
+            summary = world.tactile.summary(raw)
+            active = {k: v for k, v in summary.items() if v["contacts"] > 0}
+            print(active or "(no taxel above the contact threshold)")
         else:
             print(f"unknown command {op!r}; type help")
     except (IndexError, ValueError, KeyError, AssertionError) as e:

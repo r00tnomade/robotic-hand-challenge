@@ -51,10 +51,11 @@ def _smoothstep(x):
 
 class HandoverEpisode:
     def __init__(self, world: World, policy: Policy, rng: np.random.Generator, obj_id: str | None = None,
-                 on_frame=None, step_fn=None):
+                 on_frame=None, step_fn=None, randomize: bool = True):
         self.world, self.policy, self.rng = world, policy, rng
         self.step_fn = step_fn or (lambda n: world.step(n))  # the viewer substitutes a locking/pacing stepper
         self.obj_id = obj_id or str(rng.choice(list(C.OBJECTS)))
+        self.randomize = randomize  # False: start exactly at the object's nominal grasp_pos/grasp_quat
         self.on_frame = on_frame  # callable(episode, Observation) once per control tick (recorder hook)
         self.substeps = round(1.0 / (C.CONTROL_HZ * world.m.opt.timestep))
         self.done = False
@@ -98,12 +99,18 @@ class HandoverEpisode:
         w = self.world
         w.reset(C.PRESHAPE_ANGLES)
         w.active = self.obj_id
-        for tries in range(1, MAX_SAMPLE_TRIES + 1):
-            target, quat, start, info = self._sample_target()
-            if self._path_clear(start, target, quat):
-                break
+        if self.randomize:
+            for tries in range(1, MAX_SAMPLE_TRIES + 1):
+                target, quat, start, info = self._sample_target()
+                if self._path_clear(start, target, quat):
+                    break
+            else:
+                raise RuntimeError(f"no collision-free handover found for {self.obj_id} in {MAX_SAMPLE_TRIES} tries")
         else:
-            raise RuntimeError(f"no collision-free handover found for {self.obj_id} in {MAX_SAMPLE_TRIES} tries")
+            cfg = C.OBJECTS[self.obj_id]
+            target, quat, start = np.array(cfg["grasp_pos"]), np.array(cfg["grasp_quat"]), np.array(cfg["grasp_pos"])
+            tries, info = 0, {"roll_rad": 0.0, "tilt_x_rad": 0.0, "tilt_z_rad": 0.0,
+                               "pivot_offset_m": [0.0, 0.0, 0.0], "approach_dir": [0.0, 0.0, 1.0]}
         self.target_pos, self.target_quat, self.start_pos = target, quat, start
         w.place(self.obj_id, start, quat)
         self.info = {"object": self.obj_id, "sample_tries": tries, "target_pos": target.tolist(),

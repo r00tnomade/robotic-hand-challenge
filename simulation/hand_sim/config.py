@@ -89,3 +89,45 @@ SUCCESS_MAX_ROT_RAD = 0.26
 
 # Pre-grasp posture: fingers open, thumb rotated into opposition (ANGLE_SET order = DOF_NAMES).
 PRESHAPE_ANGLES = [1000, 1000, 1000, 1000, 1000, 0]
+
+# --- Tactile sensors (docs/internal/hand_manual.pdf, section 2.6.20 / p.26-27) -------------------
+# 17 sensor groups, matching the register addresses, sizes and names used in models/dataset.
+# Column key = the real dataset's lowercase_with_underscore name, e.g. "little_tip".
+#
+# Patch geometry (where each group sits on its body) is NOT hardcoded here: tactile.py derives it
+# at startup from the live mesh, using the conventions below plus a (start_frac, end_frac) window
+# along the body's row axis, measured from the joint end (0.0) to the fingertip/distal end (1.0).
+# This was calibrated by sampling real contact points during many grasps (see calibrate_tactile.py)
+# and cross-checked against each mesh's own bounding box; it is an approximation of the real sensor
+# placement in the hand manual's diagram (p.26), not a measured fact.
+TACTILE_CONTACT_THRESHOLD = 50  # raw units; matches hardware/tools/hand_gui.py and models/dataset
+TACTILE_RAW_MAX = 4095
+
+# Local axis convention per body category: row_axis points from the joint (0) toward the fingertip
+# (1); col_axis is the other in-plane direction; normal points out of the surface into the contact.
+FINGER_AXES = {"row": [0, 1, 0], "col": [0, 0, -1], "normal": [-1, 0, 0]}
+THUMB_AXES = {"row": [1, 0, 0], "col": [0, 0, 1], "normal": [0, 1, 0]}
+PALM_AXES = {"row": [0, 0, 1], "col": [0, 1, 0], "normal": [1, 0, 0]}
+COL_FRAC = (0.1, 0.9)  # shared margin across the width of every non-palm patch
+
+SENSOR_GROUPS = [
+    # name, addr, rows, cols, body, axes, row_frac
+    ("little_tip", 3000, 3, 3, "right_pinky_intermediate", FINGER_AXES, (0.76, 0.97)),
+    ("little_nail", 3018, 12, 8, "right_pinky_intermediate", FINGER_AXES, (0.08, 0.72)),
+    ("little_pad", 3210, 10, 8, "right_pinky_proximal", FINGER_AXES, (0.12, 0.85)),
+    ("ring_tip", 3370, 3, 3, "right_ring_intermediate", FINGER_AXES, (0.76, 0.97)),
+    ("ring_nail", 3388, 12, 8, "right_ring_intermediate", FINGER_AXES, (0.08, 0.72)),
+    ("ring_pad", 3580, 10, 8, "right_ring_proximal", FINGER_AXES, (0.12, 0.85)),
+    ("middle_tip", 3740, 3, 3, "right_middle_intermediate", FINGER_AXES, (0.76, 0.97)),
+    ("middle_nail", 3758, 12, 8, "right_middle_intermediate", FINGER_AXES, (0.08, 0.72)),
+    ("middle_pad", 3950, 10, 8, "right_middle_proximal", FINGER_AXES, (0.12, 0.85)),
+    ("index_tip", 4110, 3, 3, "right_index_intermediate", FINGER_AXES, (0.76, 0.97)),
+    ("index_nail", 4128, 12, 8, "right_index_intermediate", FINGER_AXES, (0.08, 0.72)),
+    ("index_pad", 4320, 10, 8, "right_index_proximal", FINGER_AXES, (0.12, 0.85)),
+    ("thumb_tip", 4480, 3, 3, "right_thumb_distal", THUMB_AXES, (0.68, 0.95)),
+    ("thumb_nail", 4498, 12, 8, "right_thumb_distal", THUMB_AXES, (0.05, 0.62)),
+    ("thumb_mid", 4690, 3, 3, "right_thumb_intermediate", THUMB_AXES, (0.45, 0.75)),
+    ("thumb_pad", 4708, 12, 8, "right_thumb_proximal", THUMB_AXES, (0.10, 0.85)),
+    ("palm", 4900, 8, 14, "right_hand_root", PALM_AXES, (0.25, 0.80)),
+]
+TACTILE_BODIES = sorted({g[4] for g in SENSOR_GROUPS})
