@@ -1,0 +1,26 @@
+{
+  "id": "vegabar_38",
+  "cad_file": "f8a929b6-d3c2-485c-9162-e154690c0d41-VEGABAR_38.stl",
+  "cad_to_object_offset_m": [
+    -0.01387877368927002,
+    0.024482578277587888,
+    4.100799560341484e-08
+  ],
+  "extents_m": [
+    0.06824245262145996,
+    0.16203484344482422,
+    0.06292149925231934
+  ],
+  "watertight": false,
+  "collision_parts": [
+    "collision_00.obj",
+    "collision_01.obj",
+    "collision_02.obj",
+    "collision_03.obj",
+    "collision_04.obj",
+    "collision_05.obj",
+    "collision_06.obj",
+    "collision_07.obj"
+  ],
+  "coacd_threshold": 0.04
+}
